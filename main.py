@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 from sqlalchemy import func, select
 import app_requests as rq
-from models import Word, init_db, async_session  
+from models import Word, init_db, async_session 
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
@@ -68,18 +68,6 @@ async def answer_easy(ans: ModeAnswer):
     next_quiz = await rq.get_quiz_by_difficulty(user.user_id, 1)
     return {"correct": correct, "next": next_quiz or {}}
 
-@app.get("/api/words")
-async def get_random_words():
-    async with async_session() as session:
-        stmt = select(Word).order_by(func.random()).limit(50)
-        result = await session.execute(stmt)
-        words = result.scalars().all()
-        return [{
-            "word_id": w.word_id,
-            "word_rus": w.word_rus,
-            "word_eng": w.word_eng
-        } for w in words]
-    
 # Medium Mode
 @app.get("/api/quiz/medium/{tg_id}")
 async def get_quiz_medium(tg_id: int):
@@ -107,3 +95,10 @@ async def answer_hard(ans: ModeAnswer):
     user = await rq.add_user(ans.tg_id)
     next_quiz = await rq.get_quiz_by_difficulty(user.user_id, 3)
     return {"correct": correct, "next": next_quiz or {}}
+
+@app.get("/api/random-words/{count}")
+async def get_random_words(count: int):
+    async with async_session() as session:
+        stmt = select(Word.word_rus).order_by(func.random()).limit(count)
+        result = await session.execute(stmt)
+        return [word[0] for word in result.all()]
